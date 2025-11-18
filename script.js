@@ -109,7 +109,13 @@
     }
 
     function setControls() {
+      if (selectedCell && selectedCell.canvas) {
+        selectedCell.canvas.parentElement.classList.remove("selected")
+      }
+
       selectedCell = cellData
+
+      cell.classList.add("selected")
       controlPanel.classList.remove("hidden")
       updateControls()
     }
@@ -185,6 +191,9 @@
 
   document.body.addEventListener("click", e => {
     if (!controlPanel.contains(e.target) && !grid.contains(e.target)) {
+      if (selectedCell) {
+        selectedCell.canvas.parentElement.classList.remove("selected")
+      }
       controlPanel.classList.add("hidden")
       selectedCell = null
     }

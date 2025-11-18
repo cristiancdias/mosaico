@@ -38,6 +38,11 @@ h1 {
   left: 0;
   user-select: none;
 }
+.grid-cell.selected {
+  border: 12px solid #00aaff !important;
+  background: #fff;
+  box-shadow: 0 0 15px rgba(0, 170, 255, 0.6);
+}
 #controls {
   position: fixed;
   top: 40px;
