@@ -10,7 +10,7 @@
   const controlPanel = document.getElementById("controls")
   const dragHandle = document.getElementById("dragHandle")
 
-  const CELL_SIZE = 600
+  const CELL_SIZE = 500
   const BORDER_SIZE_CSS = 12
   const COLS = 3
   const ROWS = 3
