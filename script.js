@@ -133,8 +133,11 @@
     })
 
     cell.addEventListener("click", () => {
-      input.click()
       setControls()
+    })
+
+    cell.addEventListener("dblclick", () => {
+      input.click()
     })
 
     cell.appendChild(canvas)
