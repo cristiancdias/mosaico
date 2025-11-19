@@ -73,10 +73,31 @@
       reader.onload = evt => {
         img = new Image()
         img.onload = () => {
-          // SUGERIDO: Lógica de centralização da imagem aqui (se implementado)
-          scale = 1
-          offsetX = 0
-          offsetY = 0
+          // --- NOVO CÓDIGO DE CENTRALIZAÇÃO ---
+          const canvasWidth = CELL_SIZE // 600
+          const canvasHeight = CELL_SIZE // 600
+          const imageWidth = img.width
+          const imageHeight = img.height
+
+          // Calcula a proporção para caber perfeitamente no canvas (Zoom Fit)
+          const ratio = Math.max(
+            canvasWidth / imageWidth,
+            canvasHeight / imageHeight
+          )
+
+          // Define a escala e garante que não seja menor que 0.1 (min do slider)
+          scale = Math.max(0.1, ratio)
+
+          // Calcula a largura e altura da imagem após o ajuste de escala
+          const scaledWidth = imageWidth * scale
+          const scaledHeight = imageHeight * scale
+
+          // Calcula o offset para centralizar (metade da diferença)
+          offsetX = (canvasWidth - scaledWidth) / 2
+          offsetY = (canvasHeight - scaledHeight) / 2
+
+          // Atualiza o valor do zoom no slider
+          zoomControl.value = scale.toFixed(2)
           draw()
           if (selectedCell === cellData) updateControls()
         }
