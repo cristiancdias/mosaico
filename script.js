@@ -10,20 +10,37 @@
   const controlPanel = document.getElementById("controls")
   const dragHandle = document.getElementById("dragHandle")
 
-  const CELL_SIZE = 500
-  const BORDER_SIZE_CSS = 12
+  // UX - Elementos para exibir valores em tempo real (Garantir que existam no HTML)
+  const zoomValueSpan = document.getElementById("zoomValue")
+  const xValueSpan = document.getElementById("xValue")
+  const yValueSpan = document.getElementById("yValue")
+
+  // --- CONSTANTES E CONFIGURAÇÃO DE TAMANHO ---
+  const CELL_SIZE = 600
+  const BORDER_SIZE_CSS = 12 // A borda de 12px que você quer imitar no CSS
   const COLS = 3
   const ROWS = 3
-  const MAX_IMAGES = 9
+  const MAX_IMAGES = 9 // Total de células criadas (2 colunas x 3 linhas)
 
   const CELL_SIZE_CSS = 500
   const SIZE_ADJUST = CELL_SIZE / CELL_SIZE_CSS
-  const BORDER_DRAW_SIZE = BORDER_SIZE_CSS * SIZE_ADJUST
+  const BORDER_DRAW_SIZE = BORDER_SIZE_CSS * SIZE_ADJUST // Espessura da borda no Canvas (~14.4px)
 
-  const FINAL_WIDTH = COLS * CELL_SIZE + (COLS + 1) * BORDER_DRAW_SIZE
-  const FINAL_HEIGHT = ROWS * CELL_SIZE + (ROWS + 1) * BORDER_DRAW_SIZE
+  // NOVO: Define o espaçamento entre as células e a margem externa
+  const SEPARATION_SIZE = 5
+
+  // Largura total de uma célula, incluindo suas duas bordas (esquerda e direita)
+  const CELL_WITH_BORDERS_SIZE = CELL_SIZE + 2 * BORDER_DRAW_SIZE
+
+  // CALCULO FINAL CORRIGIDO: Total = Células * (Tamanho da Célula com Bordas) + (Número de Células + 1) * SEPARATION_SIZE
+  const FINAL_WIDTH =
+    COLS * CELL_WITH_BORDERS_SIZE + (COLS + 1) * SEPARATION_SIZE
+  const FINAL_HEIGHT =
+    ROWS * CELL_WITH_BORDERS_SIZE + (ROWS + 1) * SEPARATION_SIZE
+
   canvasOutput.width = FINAL_WIDTH
   canvasOutput.height = FINAL_HEIGHT
+  // --- FIM CONSTANTES ---
 
   let cells = []
   let selectedCell = null
@@ -56,6 +73,7 @@
       reader.onload = evt => {
         img = new Image()
         img.onload = () => {
+          // SUGERIDO: Lógica de centralização da imagem aqui (se implementado)
           scale = 1
           offsetX = 0
           offsetY = 0
@@ -103,19 +121,28 @@
     })
 
     function updateControls() {
+      // Atualiza os inputs
       zoomControl.value = scale.toFixed(2)
       xControl.value = Math.round(offsetX)
       yControl.value = Math.round(offsetY)
+
+      // UX: Atualiza os spans de valor
+      zoomValueSpan.textContent = scale.toFixed(2)
+      xValueSpan.textContent = Math.round(offsetX)
+      yValueSpan.textContent = Math.round(offsetY)
     }
 
     function setControls() {
+      // UX: Remove a classe de seleção da célula anterior
       if (selectedCell && selectedCell.canvas) {
         selectedCell.canvas.parentElement.classList.remove("selected")
       }
 
       selectedCell = cellData
 
+      // UX: Adiciona a classe de seleção à célula atual
       cell.classList.add("selected")
+
       controlPanel.classList.remove("hidden")
       updateControls()
     }
@@ -124,26 +151,32 @@
       if (selectedCell !== cellData) return
       scale = parseFloat(zoomControl.value)
       draw()
+      zoomValueSpan.textContent = scale.toFixed(2) // UX: atualização em tempo real
     })
 
     xControl.addEventListener("input", () => {
       if (selectedCell !== cellData) return
       offsetX = parseInt(xControl.value)
       draw()
+      xValueSpan.textContent = offsetX // UX: atualização em tempo real
     })
 
     yControl.addEventListener("input", () => {
       if (selectedCell !== cellData) return
       offsetY = parseInt(yControl.value)
       draw()
+      yValueSpan.textContent = offsetY // UX: atualização em tempo real
     })
 
+    // CORREÇÃO: Clique simples abre apenas o painel de ajuste
     cell.addEventListener("click", () => {
       setControls()
     })
 
+    // CORREÇÃO: Duplo clique abre o diálogo de seleção de arquivo
     cell.addEventListener("dblclick", () => {
       input.click()
+      // setControls() // O setControls será chamado no click simples subsequente
     })
 
     cell.appendChild(canvas)
@@ -191,6 +224,7 @@
 
   document.body.addEventListener("click", e => {
     if (!controlPanel.contains(e.target) && !grid.contains(e.target)) {
+      // UX: Remove o destaque da célula selecionada ao fechar o painel
       if (selectedCell) {
         selectedCell.canvas.parentElement.classList.remove("selected")
       }
@@ -208,7 +242,7 @@
   }
 
   generateBtn.addEventListener("click", async () => {
-    // 1. Configurações e limpeza do canvas
+    // 1. LIMPEZA TOTAL E BORDA EXTERNA GRADIENTE
     ctx.fillStyle = "#fff"
     ctx.fillRect(0, 0, FINAL_WIDTH, FINAL_HEIGHT)
 
@@ -217,55 +251,76 @@
       await waitImageLoad(cell.img)
     }
 
-    const CELL_SIZE_CSS = 500
-    const BORDER_SIZE_CSS = 12 // 12px de borda gradiente no CSS
+    // Desenha o quadro gradiente total (CORREÇÃO DE BORDA EXTERNA)
+    const externalGrad = ctx.createLinearGradient(
+      0,
+      FINAL_HEIGHT,
+      FINAL_WIDTH,
+      0
+    )
+    externalGrad.addColorStop(0, "#ff0055")
+    externalGrad.addColorStop(1, "#1e723a")
 
-    // Ajusta o tamanho da borda para a proporção do canvas (600px)
-    const SIZE_ADJUST = CELL_SIZE / CELL_SIZE_CSS
-    // O tamanho que a borda deve ter no finalCanvas (12 * 1.2 = 14.4px)
-    const BORDER_DRAW_SIZE = BORDER_SIZE_CSS * SIZE_ADJUST
+    // Preenche todo o Canvas com o gradiente
+    ctx.fillStyle = externalGrad
+    ctx.fillRect(0, 0, FINAL_WIDTH, FINAL_HEIGHT)
 
-    // 2. Desenhar primeiro a Borda Gradiente e o fundo branco para cada célula
+    // Desenha a MÁSCARA BRANCA INTERNA (cria a margem externa)
+    const innerCanvasWidth = FINAL_WIDTH - 2 * SEPARATION_SIZE
+    const innerCanvasHeight = FINAL_HEIGHT - 2 * SEPARATION_SIZE
+
+    ctx.fillStyle = "#fff"
+    ctx.fillRect(
+      SEPARATION_SIZE,
+      SEPARATION_SIZE,
+      innerCanvasWidth,
+      innerCanvasHeight
+    )
+
+    // 2. Desenhar as BORDAS INTERNAS e o fundo branco para cada célula
     for (let i = 0; i < MAX_IMAGES; i++) {
       const col = i % COLS
       const row = Math.floor(i / COLS)
 
-      // Posição do canto superior esquerdo da área da CÉLULA + BORDA
-      const cellFullX = BORDER_DRAW_SIZE + col * (CELL_SIZE + BORDER_DRAW_SIZE)
-      const cellFullY = BORDER_DRAW_SIZE + row * (CELL_SIZE + BORDER_DRAW_SIZE)
+      // Posição de início do retângulo gradiente (após a separação externa)
+      const cellStartX =
+        SEPARATION_SIZE + col * (CELL_WITH_BORDERS_SIZE + SEPARATION_SIZE)
+      const cellStartY =
+        SEPARATION_SIZE + row * (CELL_WITH_BORDERS_SIZE + SEPARATION_SIZE)
 
-      // Criar o Gradiente Linear Diagonal (do canto inf-esq para sup-dir)
+      // Criar e aplicar o Gradiente INTERNO
       const grad = ctx.createLinearGradient(
-        cellFullX - BORDER_DRAW_SIZE,
-        cellFullY + CELL_SIZE + BORDER_DRAW_SIZE,
-        cellFullX + CELL_SIZE + BORDER_DRAW_SIZE,
-        cellFullY - BORDER_DRAW_SIZE
+        cellStartX,
+        cellStartY + CELL_WITH_BORDERS_SIZE,
+        cellStartX + CELL_WITH_BORDERS_SIZE,
+        cellStartY
       )
-
-      // Cores: #ff0055 -> #1e723a
       grad.addColorStop(0, "#ff0055")
       grad.addColorStop(1, "#1e723a")
 
-      // Desenhar o retângulo gradiente que cobre a borda e o interior
+      // Desenhar o retângulo gradiente (BORDA + INTERIOR)
       ctx.fillStyle = grad
       ctx.fillRect(
-        cellFullX - BORDER_DRAW_SIZE,
-        cellFullY - BORDER_DRAW_SIZE,
-        CELL_SIZE + 2 * BORDER_DRAW_SIZE,
-        CELL_SIZE + 2 * BORDER_DRAW_SIZE
+        cellStartX,
+        cellStartY,
+        CELL_WITH_BORDERS_SIZE,
+        CELL_WITH_BORDERS_SIZE
       )
 
-      // Desenhar o retângulo branco por cima, "cortando" o gradiente,
-      // deixando apenas a área da borda visível.
+      // Desenhar o retângulo branco por cima (A MÁSCARA INTERNA)
       ctx.fillStyle = "#fff"
-      ctx.fillRect(cellFullX, cellFullY, CELL_SIZE, CELL_SIZE)
+      ctx.fillRect(
+        cellStartX + BORDER_DRAW_SIZE,
+        cellStartY + BORDER_DRAW_SIZE,
+        CELL_SIZE,
+        CELL_SIZE
+      )
     }
 
     // 3. Desenhar o conteúdo da imagem (o que estava faltando)
     cells.forEach((cell, index) => {
       if (!cell.img || !cell.img.src || !cell.img.complete) return
 
-      // Cria um canvas temporário para desenhar a imagem ajustada (zoom/offset)
       const tempCanvas = document.createElement("canvas")
       tempCanvas.width = CELL_SIZE
       tempCanvas.height = CELL_SIZE
@@ -278,11 +333,16 @@
       const col = index % COLS
       const row = Math.floor(index / COLS)
 
-      // A POSIÇÃO FINAL AGORA É O CANTO SUPERIOR ESQUERDO DO QUADRADO INTERNO BRANCO.
-      const posX = BORDER_DRAW_SIZE + col * (CELL_SIZE + BORDER_DRAW_SIZE)
-      const posY = BORDER_DRAW_SIZE + row * (CELL_SIZE + BORDER_DRAW_SIZE)
+      // POSIÇÃO DE DESENHO DA IMAGEM: Mesma posição da MÁSCARA BRANCA INTERNA
+      const posX =
+        SEPARATION_SIZE +
+        col * (CELL_WITH_BORDERS_SIZE + SEPARATION_SIZE) +
+        BORDER_DRAW_SIZE
+      const posY =
+        SEPARATION_SIZE +
+        row * (CELL_WITH_BORDERS_SIZE + SEPARATION_SIZE) +
+        BORDER_DRAW_SIZE
 
-      // Desenha a imagem na posição correta, DENTRO da borda.
       ctx.drawImage(tempCanvas, posX, posY)
     })
 
